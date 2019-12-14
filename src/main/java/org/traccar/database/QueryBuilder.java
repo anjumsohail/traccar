@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.sql.DatabaseMetaData;
 
 public final class QueryBuilder {
 
@@ -53,14 +54,23 @@ public final class QueryBuilder {
     private final boolean returnGeneratedKeys;
 
     private QueryBuilder(DataSource dataSource, String query, boolean returnGeneratedKeys) throws SQLException {
+        DatabaseMetaData md;
         this.query = query;
         this.returnGeneratedKeys = returnGeneratedKeys;
         if (query != null) {
             connection = dataSource.getConnection();
+            md = connection.getMetaData();
             String parsedQuery = parse(query.trim(), indexMap);
             try {
                 if (returnGeneratedKeys) {
-                    statement = connection.prepareStatement(parsedQuery, Statement.RETURN_GENERATED_KEYS);
+                   if (md.supportsGetGeneratedKeys()) {
+                        statement = connection.prepareStatement(parsedQuery, Statement.RETURN_GENERATED_KEYS);
+                        }
+                    else
+                        {
+                        int[] ColIndex={1};
+                        statement = connection.prepareStatement(parsedQuery, ColIndex);
+                        }
                 } else {
                     statement = connection.prepareStatement(parsedQuery);
                 }
